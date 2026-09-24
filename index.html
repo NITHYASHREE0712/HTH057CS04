@@ -3,40 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monday Fix List</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&display=swap" rel="stylesheet">
+<title>Fix Sprint</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-:root{--bg:#e9eef2;--panel:#fff;--ink:#1b2a38;--mut:#5b6b7a;--line:#cbd5de;--hi:#c8372d;--mid:#d98a1c;--lo:#3f8f6b;--focus:#1f5fbf}
+:root{--bg:#071014;--panel:#0d1b20;--panel2:#10242a;--ink:#e6fbf7;--mut:#88a7a8;--line:#1c3d43;--hi:#ff5b6e;--mid:#ffc857;--lo:#8be28b;--cyan:#4de1d2;--focus:#4de1d2;--shadow:0 16px 40px rgba(0,0,0,.25)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums}
-header{padding:28px 32px 8px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:end}
-h1{font:600 30px/1.15 "IBM Plex Serif",Georgia,serif;margin:0}
+body{margin:0;background-color:var(--bg);background-image:linear-gradient(rgba(77,225,210,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(77,225,210,.045) 1px,transparent 1px);background-size:32px 32px;color:var(--ink);font:15px/1.5 "Space Grotesk",sans-serif;font-variant-numeric:tabular-nums}
+header{padding:32px 32px 12px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:end;border-bottom:1px solid var(--line);background:rgba(7,16,20,.9)}
+h1{font:700 32px/1.15 "Space Grotesk",sans-serif;letter-spacing:0;margin:0;color:#fff}
+header h1:before{content:"// ";color:var(--cyan)}
 header p{margin:4px 0 0;color:var(--mut);max-width:60ch}
 .nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.nav-btn{background:transparent;color:var(--ink);border:1px solid var(--line);cursor:pointer}
-.nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.nav-btn{background:transparent;color:var(--mut);border:1px solid var(--line);cursor:pointer;text-transform:uppercase;font:500 12px "IBM Plex Mono",monospace;letter-spacing:.04em}
+.nav-btn:hover{color:var(--cyan);border-color:var(--cyan)}
+.nav-btn.active{background:var(--cyan);color:#061014;border-color:var(--cyan);box-shadow:0 0 18px rgba(77,225,210,.2)}
 label{font-size:13px;color:var(--mut)}
-input,select,button{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
-button{background:var(--ink);color:#fff;border-color:var(--ink);cursor:pointer}
+input,select,button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);color:var(--ink)}
+input::placeholder{color:#58777a}
+button{background:var(--cyan);color:#061014;border-color:var(--cyan);cursor:pointer;font-weight:600}
+button:hover{filter:brightness(1.1);box-shadow:0 0 16px rgba(77,225,210,.2)}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 main{padding:8px 32px 40px;display:grid;gap:20px}
 .page{display:none}
 .page.active{display:block}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-.kpi{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ink);padding:12px 14px}
-.kpi b{display:block;font-size:26px}
+.kpi{background:rgba(13,27,32,.94);border:1px solid var(--line);border-left:3px solid var(--cyan);padding:14px 16px;box-shadow:var(--shadow)}
+.kpi b{display:block;font:600 28px "IBM Plex Mono",monospace;color:var(--cyan)}
 .kpi span{color:var(--mut);font-size:13px}
-section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;overflow-x:auto}
+section{background:rgba(13,27,32,.96);border:1px solid var(--line);border-radius:4px;padding:18px 20px;overflow-x:auto;box-shadow:var(--shadow)}
 h2{font-size:17px;margin:0 0 4px}
 .sub{margin:0 0 12px;color:var(--mut);font-size:13px}
 table{width:100%;border-collapse:collapse}
-th{font-weight:500;font-size:13px;color:var(--mut);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
-td{padding:8px;border-bottom:1px solid #e3e9ee;vertical-align:top}
-.bar{height:8px;border-radius:4px;background:var(--hi);min-width:3px}
+th{font:500 12px "IBM Plex Mono",monospace;color:var(--mut);text-align:left;padding:8px;border-bottom:1px solid var(--line);text-transform:uppercase}
+td{padding:9px 8px;border-bottom:1px solid #173238;vertical-align:top}
+td small, .status, .fix em{font-family:"IBM Plex Mono",monospace}
+.bar{height:6px;border-radius:3px;background:var(--hi);min-width:3px;box-shadow:0 0 8px currentColor}
 .shift{font-weight:600}.up{color:var(--hi)}.down{color:var(--lo)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
-.week{border-left:3px solid var(--ink);padding:2px 0 2px 12px;margin-bottom:14px}
+.week{border-left:3px solid var(--cyan);padding:2px 0 2px 12px;margin-bottom:14px}
 .week small{color:var(--mut)}
 .fix{margin:6px 0}.fix em{color:var(--mut);font-style:normal;font-size:13px}
 .err{color:var(--hi)}
@@ -47,15 +52,60 @@ td{padding:8px;border-bottom:1px solid #e3e9ee;vertical-align:top}
 .status.baseline-ok{color:var(--lo);background:#e3f2eb}
 .status.unknown{color:var(--mut);background:#edf1f4}
 .summary-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
-.summary-list div{border-top:3px solid var(--ink);padding:8px;background:#f7f9fa}
-.summary-list b{display:block;font-size:22px}
+.summary-list div{border-top:2px solid var(--cyan);padding:9px;background:var(--panel2)}
+.summary-list b{display:block;font:600 22px "IBM Plex Mono",monospace;color:var(--cyan)}
+.ai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;margin-top:14px}
+.ai-card{border:1px solid var(--line);border-top:3px solid var(--cyan);padding:14px;background:rgba(16,36,42,.72);min-width:0}
+.ai-card.urgent{border-top-color:var(--hi)}
+.ai-card.high{border-top-color:var(--mid)}
+.ai-head{display:flex;align-items:flex-start;gap:10px}
+.ai-rank{font:600 12px "IBM Plex Mono",monospace;color:var(--mut);padding-top:3px}
+.ai-title{display:block;font-weight:600;line-height:1.25}
+.ai-asset{display:block;color:var(--mut);font:11px "IBM Plex Mono",monospace;margin-top:4px}
+.ai-risk{margin-left:auto;font:600 22px "IBM Plex Mono",monospace;color:var(--cyan);white-space:nowrap}
+.urgent .ai-risk{color:var(--hi)}
+.high .ai-risk{color:var(--mid)}
+.ai-meter{height:5px;background:#173238;margin:14px 0 10px;overflow:hidden}
+.ai-meter i{display:block;height:100%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.urgent .ai-meter i{background:var(--hi);box-shadow:0 0 10px var(--hi)}
+.high .ai-meter i{background:var(--mid);box-shadow:0 0 10px var(--mid)}
+.ai-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.ai-pill,.ai-confidence{font:500 10px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.05em}
+.ai-pill{color:var(--ink);background:var(--cyan);padding:3px 6px}
+.urgent .ai-pill{background:var(--hi);color:#22070b}
+.high .ai-pill{background:var(--mid);color:#241900}
+.ai-confidence{color:var(--mut)}
+.ai-signals{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 12px}
+.ai-signal{border:1px solid var(--line);padding:3px 6px;color:var(--mut);font:11px "IBM Plex Mono",monospace}
+.ai-action{border-left:2px solid var(--cyan);padding-left:8px;margin:0;color:var(--ink);font-size:13px}
+.ai-action strong{color:var(--cyan);font:500 10px "IBM Plex Mono",monospace;text-transform:uppercase;display:block;margin-bottom:3px}
+.scan-findings{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.scan-finding{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:9px 0;border-bottom:1px solid #173238}
+.scan-finding strong{display:block}.scan-finding small{color:var(--mut);font-family:"IBM Plex Mono",monospace}
+.scan-risk{font:600 16px "IBM Plex Mono",monospace;color:var(--hi);white-space:nowrap}
+.roadmap-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 18px}
+.roadmap-stat{padding:10px;background:var(--panel2);border-top:2px solid var(--cyan)}
+.roadmap-stat b{display:block;color:var(--cyan);font:600 20px "IBM Plex Mono",monospace}
+.roadmap-stat span{color:var(--mut);font-size:11px}
+.roadmap-intro{border-left:2px solid var(--cyan);padding-left:10px;margin:0 0 18px;color:var(--mut);font-size:13px}
+.roadmap-week{padding:0 0 18px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.roadmap-week:last-child{border-bottom:0;margin-bottom:0}
+.roadmap-week-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.roadmap-week-head b{display:block;margin-top:3px}
+.week-tag{display:block;color:var(--cyan);font:500 10px "IBM Plex Mono",monospace;letter-spacing:.08em}
+.week-impact{text-align:right}.week-impact strong{display:block;color:var(--lo);font:600 16px "IBM Plex Mono",monospace}.week-impact small{color:var(--mut);font-size:11px}
+.roadmap-risk{height:9px;background:#173238;margin:12px 0 4px;position:relative;overflow:hidden}
+.roadmap-risk i{display:block;height:100%;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.roadmap-risk-label{display:flex;justify-content:space-between;color:var(--mut);font:10px "IBM Plex Mono",monospace}
+.roadmap-fix{margin-top:10px;padding:8px 10px;background:rgba(16,36,42,.7);border-left:2px solid var(--line)}
+.roadmap-fix b{display:block;font-size:13px}.roadmap-fix small{color:var(--mut);font:11px "IBM Plex Mono",monospace}
 @media (prefers-reduced-motion:no-preference){.bar{transition:width .5s}}
 </style>
 </head>
 <body>
 <header>
   <div>
-    <h1>Monday Fix List</h1>
+    <h1>Fix Sprint</h1>
     <p>Scanners list what is wrong. This ranks findings by business risk, then plans the fixes your team can finish each week.</p>
     <div class="nav">
       <button class="nav-btn active" data-page="dashboard">Dashboard</button>
@@ -101,8 +151,8 @@ td{padding:8px;border-bottom:1px solid #e3e9ee;vertical-align:top}
 
   <div class="page" data-page="roadmap">
     <div class="grid2">
-      <section><h2>Remediation roadmap</h2><p class="sub">Fixes are chosen by total risk removed. One fix can clear several findings.</p><div id="roadmap"></div></section>
-      <section><h2>Risk after each week</h2><p class="sub">Total risk if the plan is followed.</p><canvas id="trend" height="220"></canvas></section>
+      <section><h2>Remediation roadmap</h2><p class="sub">Each week groups fixes by the risk they remove. The bars show what risk remains after that week.</p><div id="roadmapSummary" class="roadmap-summary"></div><div id="roadmap"></div></section>
+      <section><h2>Risk after each week</h2><p class="sub">Lower is better: the line tracks residual risk after the planned fixes are completed.</p><canvas id="trend" height="220"></canvas></section>
     </div>
   </div>
 
@@ -134,8 +184,18 @@ async function load() {
 
   $("aiMethod").textContent = d.ai_insights.method;
   $("aiSummary").innerHTML = `<b>${d.ai_insights.summary}</b>`;
-  $("aiPriorities").innerHTML = d.ai_insights.priorities.map(item =>
-    `<div class="week"><b>${item.priority.toUpperCase()} · ${item.title}</b> <small>${item.asset_name} · risk ${item.risk} · confidence ${item.confidence}</small><br><span>${item.reason}. Recommended action: ${item.recommendation}.</span></div>`).join("");
+  const aiMax = Math.max(...d.ai_insights.priorities.map(item => item.risk), 1);
+  $("aiPriorities").className = "ai-grid";
+  $("aiPriorities").innerHTML = d.ai_insights.priorities.map((item, index) => {
+    const signals = item.reason.split(", ").map(signal => `<span class="ai-signal">${signal}</span>`).join("");
+    return `<article class="ai-card ${item.priority}">
+      <div class="ai-head"><span class="ai-rank">0${index + 1}</span><div><span class="ai-title">${item.title}</span><span class="ai-asset">${item.asset_name}</span></div><strong class="ai-risk">${item.risk}</strong></div>
+      <div class="ai-meter"><i style="width:${item.risk / aiMax * 100}%"></i></div>
+      <div class="ai-meta"><span class="ai-pill">${item.priority}</span><span class="ai-confidence">confidence: ${item.confidence}</span></div>
+      <div class="ai-signals">${signals}</div>
+      <p class="ai-action"><strong>Recommended action</strong>${item.recommendation}</p>
+    </article>`;
+  }).join("");
 
   $("kpis").innerHTML = `
     <div class="kpi"><b>${d.total_risk}</b><span>Total risk score</span></div>
@@ -168,14 +228,21 @@ async function load() {
   assetFilter.innerHTML = '<option value="">All assets</option>' + d.assets.map(a => `<option value="${a.name}">${a.name}</option>`).join("");
   assetFilter.value = selectedAsset;
   renderFindings();
-  $("roadmap").innerHTML = d.roadmap.map(w => `<div class="week"><b>Week ${w.week}</b> <small>risk left: ${w.residual_risk}</small>` +
-    w.fixes.map(x => `<div class="fix">${x.title} <em>on ${x.asset_name} · removes ${x.risk_removed} risk · effort ${x.effort}<br>clears: ${x.findings.join(", ")}</em></div>`).join("") + "</div>").join("");
+  const finalRisk = d.trend[d.trend.length - 1] || 0;
+  const riskRemoved = Math.max(d.total_risk - finalRisk, 0);
+  $("roadmapSummary").innerHTML = `<div class="roadmap-stat"><b>${riskRemoved.toFixed(1)}</b><span>risk removed by plan</span></div><div class="roadmap-stat"><b>${finalRisk.toFixed(1)}</b><span>residual risk</span></div><div class="roadmap-stat"><b>${planned}</b><span>fixes scheduled</span></div>`;
+  $("roadmap").innerHTML = `<p class="roadmap-intro">Read each bar from left to right: the filled portion is residual risk, while the gap represents risk removed by the plan.</p>` + d.roadmap.map((w, index) => {
+    const before = index === 0 ? d.total_risk : d.roadmap[index - 1].residual_risk;
+    const removed = Math.max(before - w.residual_risk, 0);
+    const remainingWidth = d.total_risk ? w.residual_risk / d.total_risk * 100 : 0;
+    return `<article class="roadmap-week"><div class="roadmap-week-head"><div><span class="week-tag">WEEK ${String(w.week).padStart(2, "0")}</span><b>${w.fixes.length} ${w.fixes.length === 1 ? "fix" : "fixes"} scheduled</b></div><div class="week-impact"><strong>-${removed.toFixed(1)}</strong><small>risk removed</small></div></div><div class="roadmap-risk"><i style="width:${remainingWidth}%"></i></div><div class="roadmap-risk-label"><span>residual risk ${w.residual_risk.toFixed(1)}</span><span>${w.fixes.reduce((sum, fix) => sum + fix.effort, 0)} effort points</span></div>${w.fixes.map(x => `<div class="roadmap-fix"><b>${x.title}</b><small>${x.asset_name} · clears ${x.findings.length} finding${x.findings.length === 1 ? "" : "s"} · removes ${x.risk_removed} risk</small></div>`).join("")}</article>`;
+  }).join("");
 
   chart && chart.destroy();
   chart = new Chart($("trend"), { type: "line",
     data: { labels: ["Now", ...d.roadmap.map(w => "Week " + w.week)],
-            datasets: [{ data: d.trend, borderColor: "#1b2a38", backgroundColor: "#1b2a38", tension: .25 }] },
-    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: "Total risk" } } } } });
+                datasets: [{ data: d.trend, borderColor: "#4de1d2", backgroundColor: "rgba(77,225,210,.12)", pointBackgroundColor: "#ff5b6e", pointBorderColor: "#e6fbf7", pointRadius: 4, fill: true, tension: .25 }] },
+              options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: "#88a7a8" }, grid: { color: "rgba(28,61,67,.5)" } }, y: { beginAtZero: true, ticks: { color: "#88a7a8" }, grid: { color: "rgba(28,61,67,.5)" }, title: { display: true, text: "Residual risk", color: "#88a7a8" } } } } });
 }
 
 function renderFindings() {
@@ -228,8 +295,11 @@ $('scanBtn').onclick = async () => {
     body: JSON.stringify({ target: $("target").value }) });
   const d = await r.json();
   if (!r.ok) { $("scanOut").innerHTML = `<span class="err">${d.detail}</span>`; return; }
+  const findings = d.findings || [];
   $("scanOut").innerHTML = `<table><tr><th>Port</th><th>Service</th><th>Version</th><th>Version check</th></tr>` +
-    d.open_ports.map(p => `<tr><td>${p.port}/${p.proto}</td><td>${p.service}</td><td>${p.version || "-"}</td><td><span class="status ${p.version_status}">${p.version_status}</span><br><small>${p.version_note}</small></td></tr>`).join("") + "</table>";
+    d.open_ports.map(p => `<tr><td>${p.port}/${p.proto}</td><td>${p.service || "-"}</td><td>${p.version || "-"}</td><td><span class="status ${p.version_status}">${p.version_status}</span><br><small>${p.version_note}</small></td></tr>`).join("") + `</table>
+    <div class="scan-findings"><h3>Generated findings (${findings.length})</h3>${findings.length ? findings.map(f =>
+      `<div class="scan-finding"><div><strong>${f.title}</strong><small>${f.fix}</small></div><span class="scan-risk">CVSS ${f.cvss}</span></div>`).join("") : "<p class='sub'>No controlled finding rules matched this scan.</p>"}</div>`;
   loadScanHistory();
 };
 

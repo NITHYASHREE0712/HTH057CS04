@@ -24,6 +24,21 @@ VERSION_BASELINES = {
     "mysql": ("5.7.0", "MySQL 5.7+ baseline"),
     "nginx": ("1.18.0", "nginx 1.18+ baseline"),
 }
+PORT_FINDING_RULES = {
+    21: ("FTP service exposed", 6.5, 0.35, "Disable FTP or restrict it to the lab network"),
+    23: ("Telnet service exposed", 7.5, 0.30, "Disable Telnet and use SSH"),
+    445: ("SMB service exposed", 7.5, 0.35, "Restrict SMB to trusted internal hosts"),
+    3306: ("MySQL service exposed", 6.5, 0.40, "Bind MySQL to localhost or a private application network"),
+    3389: ("RDP service exposed", 7.5, 0.35, "Restrict RDP behind a VPN or approved administrator network"),
+}
+SERVICE_FIXES = {
+    "apache": "Upgrade Apache and review supported PHP versions",
+    "openssh": "Upgrade OpenSSH to a supported release",
+    "vsftpd": "Upgrade vsftpd or disable FTP",
+    "samba": "Upgrade Samba to a supported release",
+    "mysql": "Upgrade MySQL and apply vendor security updates",
+    "nginx": "Upgrade nginx to a supported release",
+}
 
 
 def resolve_nmap_executable():
@@ -82,6 +97,13 @@ def init_database():
                 version TEXT, version_status TEXT NOT NULL, version_note TEXT,
                 FOREIGN KEY(scan_id) REFERENCES scans(id)
             );
+            CREATE TABLE IF NOT EXISTS scan_findings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, scan_id INTEGER NOT NULL,
+                asset TEXT NOT NULL, title TEXT NOT NULL, cve TEXT,
+                cvss REAL NOT NULL, epss REAL NOT NULL, kev INTEGER NOT NULL,
+                fix_id TEXT NOT NULL, fix TEXT NOT NULL, effort INTEGER NOT NULL,
+                FOREIGN KEY(scan_id) REFERENCES scans(id)
+            );
         """)
         if connection.execute("SELECT COUNT(*) FROM assets").fetchone()[0] == 0:
             connection.executemany(
@@ -113,8 +135,21 @@ def read_assets():
 
 def read_findings():
     with database() as connection:
-        return [dict(row) for row in connection.execute(
+        findings = [dict(row) for row in connection.execute(
             "SELECT asset, title, cve, cvss, epss, kev, fix_id, fix, effort FROM findings ORDER BY id")]
+        findings.extend(dict(row) for row in connection.execute("""
+            SELECT sf.asset, sf.title, sf.cve, sf.cvss, sf.epss, sf.kev,
+                   sf.fix_id, sf.fix, sf.effort
+            FROM scan_findings sf
+            JOIN scans s ON s.id = sf.scan_id
+            WHERE s.id = (
+                SELECT latest.id FROM scans latest
+                WHERE latest.target = s.target
+                ORDER BY latest.scanned_at DESC, latest.id DESC LIMIT 1
+            )
+            ORDER BY sf.id
+        """))
+        return findings
 
 
 init_database()
@@ -298,6 +333,49 @@ def resolve_target_ip(target: str):
     raise HTTPException(400, f"Could not resolve a private/loopback address for '{value}'")
 
 
+def ensure_scan_asset(target):
+    """Attach a scan to a catalog asset, or create a low-trust lab asset."""
+    target_value = str(target)
+    with database() as connection:
+        rows = [dict(row) for row in connection.execute("SELECT id, ip FROM assets")]
+        for asset in rows:
+            if asset["ip"] == target_value or asset["ip"].split(":")[0] == target_value:
+                return asset["id"]
+        asset_id = "scan-" + "".join(ch if ch.isalnum() else "-" for ch in target_value).strip("-")
+        connection.execute(
+            "INSERT OR IGNORE INTO assets (id, name, ip, criticality, exposure) VALUES (?, ?, ?, ?, ?)",
+            (asset_id, f"Scanned lab target ({target_value})", target_value, 1, "internal"))
+        return asset_id
+
+
+def build_scan_findings(services, asset_id):
+    """Convert only known Nmap observations into conservative findings."""
+    findings = []
+    for service in services:
+        service_name = service["service"].lower()
+        if service["version_status"] == "outdated":
+            product = service_name or "service"
+            fix = next((fix for name, fix in SERVICE_FIXES.items() if name in service_name),
+                       f"Upgrade or remove the outdated {product} service")
+            findings.append({
+                "asset": asset_id,
+                "title": f"Outdated {product} {service['version']}",
+                "cve": "", "cvss": 7.5, "epss": 0.60, "kev": False,
+                "fix_id": f"nmap-outdated-{service['port']}", "fix": fix, "effort": 2,
+            })
+
+        rule = PORT_FINDING_RULES.get(service["port"])
+        if rule:
+            title, cvss, epss, fix = rule
+            findings.append({
+                "asset": asset_id,
+                "title": title,
+                "cve": "", "cvss": cvss, "epss": epss, "kev": False,
+                "fix_id": f"nmap-port-{service['port']}", "fix": fix, "effort": 1,
+            })
+    return findings
+
+
 @app.post("/api/scan")
 def scan(req: ScanRequest):
     """Service/version scan. Accept either a private IP or a lab hostname resolving to a private/loopback IP."""
@@ -334,6 +412,8 @@ def scan(req: ScanRequest):
         "scanned_at": datetime.now(timezone.utc).isoformat(),
         "open_ports": services,
     }
+    asset_id = ensure_scan_asset(target_ip)
+    live_findings = build_scan_findings(services, asset_id)
     with database() as connection:
         cursor = connection.execute(
             "INSERT INTO scans (target, scanned_at) VALUES (?, ?)",
@@ -343,10 +423,17 @@ def scan(req: ScanRequest):
                 "INSERT INTO scan_ports (scan_id, port, proto, service, version, version_status, version_note) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (cursor.lastrowid, service["port"], service["proto"], service["service"],
                  service["version"], service["version_status"], service["version_note"]))
+        for finding in live_findings:
+            connection.execute(
+                "INSERT INTO scan_findings (scan_id, asset, title, cve, cvss, epss, kev, fix_id, fix, effort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (cursor.lastrowid, finding["asset"], finding["title"], finding["cve"],
+                 finding["cvss"], finding["epss"], int(finding["kev"]), finding["fix_id"],
+                 finding["fix"], finding["effort"]))
         connection.execute("""
             DELETE FROM scans
             WHERE id NOT IN (SELECT id FROM scans ORDER BY scanned_at DESC LIMIT 25)
         """)
+    result["findings"] = live_findings
     return result
 
 

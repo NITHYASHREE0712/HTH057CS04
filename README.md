@@ -15,4 +15,5 @@ Open http://127.0.0.1:8000
 - `findings.json`: findings with CVSS, EPSS, KEV, and the fix that clears them (illustrative values, replace with real scan + enrichment data)
 - `security.db`  : SQLite database containing assets, findings, scan results, and scan ports. Existing JSON data is imported automatically on first run.
 - Scan panel needs nmap (https://nmap.org). Only private/loopback IPs are accepted.
+- Nmap scans create controlled findings for outdated known services and risky exposed ports. The latest scan for each target is merged into the report and risk engine.
 - Only scan machines you own or lab targets (Metasploitable, DVWA, Juice Shop).
