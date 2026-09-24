@@ -1,0 +1,141 @@
+[
+  {
+    "target": "192.168.56.101",
+    "scanned_at": "2026-09-24T12:17:18.856844+00:00",
+    "open_ports": []
+  },
+  {
+    "target": "127.0.0.1",
+    "scanned_at": "2026-09-24T10:03:42.269170+00:00",
+    "open_ports": [
+      {
+        "port": 135,
+        "proto": "tcp",
+        "service": "msrpc",
+        "version": "Microsoft Windows RPC",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 445,
+        "proto": "tcp",
+        "service": "microsoft-ds",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1028,
+        "proto": "tcp",
+        "service": "",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1029,
+        "proto": "tcp",
+        "service": "ms-lsa",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1030,
+        "proto": "tcp",
+        "service": "iad1",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1031,
+        "proto": "tcp",
+        "service": "iad2",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1032,
+        "proto": "tcp",
+        "service": "iad3",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1033,
+        "proto": "tcp",
+        "service": "tcpwrapped",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1034,
+        "proto": "tcp",
+        "service": "zincite-a",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1035,
+        "proto": "tcp",
+        "service": "multidropper",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1036,
+        "proto": "tcp",
+        "service": "nsstp",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 1037,
+        "proto": "tcp",
+        "service": "ams",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 3306,
+        "proto": "tcp",
+        "service": "mysql",
+        "version": "MySQL 8.0.44",
+        "version_status": "baseline-ok",
+        "version_note": "MySQL 5.7+ baseline; detected MySQL 8.0.44"
+      },
+      {
+        "port": 7070,
+        "proto": "tcp",
+        "service": "realserver",
+        "version": "",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 8000,
+        "proto": "tcp",
+        "service": "http",
+        "version": "Uvicorn",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      },
+      {
+        "port": 8001,
+        "proto": "tcp",
+        "service": "http",
+        "version": "Uvicorn",
+        "version_status": "unknown",
+        "version_note": "No baseline available"
+      }
+    ]
+  }
+]

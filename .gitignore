@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+security.db
+security.db.corrupt-*
+.env
+nmap-*.rpm

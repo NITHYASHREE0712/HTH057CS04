@@ -1,0 +1,15 @@
+[
+  {"asset": "meta", "title": "vsftpd 2.3.4 backdoor", "cve": "CVE-2011-2523", "cvss": 9.8, "epss": 0.90, "kev": false, "fix_id": "meta-ftp", "fix": "Remove vsftpd 2.3.4 / disable FTP", "effort": 1},
+  {"asset": "meta", "title": "UnrealIRCd backdoor", "cve": "CVE-2010-2075", "cvss": 9.8, "epss": 0.85, "kev": false, "fix_id": "meta-irc", "fix": "Remove UnrealIRCd", "effort": 1},
+  {"asset": "meta", "title": "Samba usermap_script command execution", "cve": "CVE-2007-2447", "cvss": 6.0, "epss": 0.95, "kev": false, "fix_id": "meta-samba", "fix": "Upgrade Samba", "effort": 2},
+  {"asset": "meta", "title": "MySQL root with empty password", "cve": "", "cvss": 9.0, "epss": 0.60, "kev": false, "fix_id": "meta-mysql", "fix": "Set root password and bind MySQL to localhost", "effort": 1},
+  {"asset": "meta", "title": "Telnet service open", "cve": "", "cvss": 7.5, "epss": 0.30, "kev": false, "fix_id": "meta-telnet", "fix": "Disable telnet, use SSH", "effort": 1},
+  {"asset": "meta", "title": "Outdated Apache 2.2.8", "cve": "CVE-2011-3192", "cvss": 7.8, "epss": 0.92, "kev": false, "fix_id": "meta-web", "fix": "Upgrade Apache and PHP", "effort": 3},
+  {"asset": "meta", "title": "PHP CGI argument injection", "cve": "CVE-2012-1823", "cvss": 7.5, "epss": 0.97, "kev": true, "fix_id": "meta-web", "fix": "Upgrade Apache and PHP", "effort": 3},
+  {"asset": "meta", "title": "Outdated OpenSSH 4.7p1", "cve": "CVE-2010-4478", "cvss": 7.5, "epss": 0.20, "kev": false, "fix_id": "meta-ssh", "fix": "Upgrade OpenSSH", "effort": 2},
+  {"asset": "dvwa", "title": "SQL injection in login/search", "cve": "CWE-89", "cvss": 8.8, "epss": 0.70, "kev": false, "fix_id": "dvwa-sqli", "fix": "Use parameterized queries", "effort": 3},
+  {"asset": "dvwa", "title": "Default admin credentials", "cve": "", "cvss": 8.0, "epss": 0.65, "kev": false, "fix_id": "dvwa-creds", "fix": "Change default credentials", "effort": 1},
+  {"asset": "dvwa", "title": "Missing security headers", "cve": "", "cvss": 4.3, "epss": 0.05, "kev": false, "fix_id": "dvwa-headers", "fix": "Add CSP, X-Frame-Options, HSTS", "effort": 1},
+  {"asset": "juice", "title": "Exposed /ftp directory", "cve": "", "cvss": 5.3, "epss": 0.10, "kev": false, "fix_id": "juice-ftp", "fix": "Restrict /ftp directory", "effort": 1},
+  {"asset": "juice", "title": "Reflected XSS", "cve": "CWE-79", "cvss": 6.1, "epss": 0.20, "kev": false, "fix_id": "juice-xss", "fix": "Sanitize and encode user input", "effort": 2}
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "meta",
+    "name": "Customer DB server (Metasploitable)",
+    "ip": "192.168.56.101",
+    "criticality": 1,
+    "exposure": "internal"
+  },
+  {
+    "id": "dvwa",
+    "name": "Public website (DVWA)",
+    "ip": "127.0.0.1:8080",
+    "criticality": 3,
+    "exposure": "internet"
+  },
+  {
+    "id": "juice",
+    "name": "Internal test app (Juice Shop)",
+    "ip": "127.0.0.1:3000",
+    "criticality": 1,
+    "exposure": "isolated"
+  }
+]

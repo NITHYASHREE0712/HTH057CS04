@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monday Fix List</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#e9eef2;--panel:#fff;--ink:#1b2a38;--mut:#5b6b7a;--line:#cbd5de;--hi:#c8372d;--mid:#d98a1c;--lo:#3f8f6b;--focus:#1f5fbf}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+header{padding:28px 32px 8px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:end}
+h1{font:600 30px/1.15 "IBM Plex Serif",Georgia,serif;margin:0}
+header p{margin:4px 0 0;color:var(--mut);max-width:60ch}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.nav-btn{background:transparent;color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+label{font-size:13px;color:var(--mut)}
+input,select,button{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+button{background:var(--ink);color:#fff;border-color:var(--ink);cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+main{padding:8px 32px 40px;display:grid;gap:20px}
+.page{display:none}
+.page.active{display:block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ink);padding:12px 14px}
+.kpi b{display:block;font-size:26px}
+.kpi span{color:var(--mut);font-size:13px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;overflow-x:auto}
+h2{font-size:17px;margin:0 0 4px}
+.sub{margin:0 0 12px;color:var(--mut);font-size:13px}
+table{width:100%;border-collapse:collapse}
+th{font-weight:500;font-size:13px;color:var(--mut);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid #e3e9ee;vertical-align:top}
+.bar{height:8px;border-radius:4px;background:var(--hi);min-width:3px}
+.shift{font-weight:600}.up{color:var(--hi)}.down{color:var(--lo)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
+.week{border-left:3px solid var(--ink);padding:2px 0 2px 12px;margin-bottom:14px}
+.week small{color:var(--mut)}
+.fix{margin:6px 0}.fix em{color:var(--mut);font-style:normal;font-size:13px}
+.err{color:var(--hi)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.filters input,.filters select{min-width:150px}
+.status{display:inline-block;padding:2px 7px;border-radius:10px;font-size:12px;font-weight:600}
+.status.outdated{color:var(--hi);background:#fbe5e2}
+.status.baseline-ok{color:var(--lo);background:#e3f2eb}
+.status.unknown{color:var(--mut);background:#edf1f4}
+.summary-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
+.summary-list div{border-top:3px solid var(--ink);padding:8px;background:#f7f9fa}
+.summary-list b{display:block;font-size:22px}
+@media (prefers-reduced-motion:no-preference){.bar{transition:width .5s}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Monday Fix List</h1>
+    <p>Scanners list what is wrong. This ranks findings by business risk, then plans the fixes your team can finish each week.</p>
+    <div class="nav">
+      <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+      <button class="nav-btn" data-page="assets">Assets</button>
+      <button class="nav-btn" data-page="findings">Findings</button>
+      <button class="nav-btn" data-page="roadmap">Roadmap</button>
+      <button class="nav-btn" data-page="scan">Scan</button>
+    </div>
+  </div>
+  <div><label for="cap">Fixes per week</label><br><input id="cap" type="number" min="1" max="50" value="5" style="width:90px"></div>
+</header>
+<main>
+  <div class="page active" data-page="dashboard">
+    <div class="kpis" id="kpis"></div>
+    <section style="margin-top:20px"><h2>AI-assisted priorities</h2><p class="sub" id="aiMethod"></p><p id="aiSummary"></p><div id="aiPriorities"></div></section>
+    <div class="grid2" style="margin-top:20px">
+      <section><h2>Findings by severity</h2><div id="severitySummary" class="summary-list"></div></section>
+      <section><h2>Risk by asset</h2><div id="assetSummary" class="summary-list"></div></section>
+    </div>
+  </div>
+
+  <div class="page" data-page="assets">
+    <section>
+      <h2>Assets</h2>
+      <p class="sub">Change how critical and how exposed an asset is. Every score and the plan update.</p>
+      <table id="assets"></table>
+    </section>
+  </div>
+
+  <div class="page" data-page="findings">
+    <section>
+      <h2>Findings ranked by business risk</h2>
+      <p class="sub">Risk = exploitability × asset criticality × exposure. The last column shows how far each finding moved compared with a CVSS-only ranking.</p>
+      <div class="filters">
+        <input id="findingSearch" type="search" placeholder="Search title or CVE" aria-label="Search findings">
+        <select id="findingAsset" aria-label="Filter by asset"><option value="">All assets</option></select>
+        <select id="findingRisk" aria-label="Filter by risk"><option value="">All risk levels</option><option value="high">High risk (15+)</option><option value="medium">Medium risk (6-15)</option><option value="low">Low risk (&lt;6)</option></select>
+        <label><input id="findingKev" type="checkbox"> Known exploited only</label>
+      </div>
+      <table id="findings"></table>
+    </section>
+  </div>
+
+  <div class="page" data-page="roadmap">
+    <div class="grid2">
+      <section><h2>Remediation roadmap</h2><p class="sub">Fixes are chosen by total risk removed. One fix can clear several findings.</p><div id="roadmap"></div></section>
+      <section><h2>Risk after each week</h2><p class="sub">Total risk if the plan is followed.</p><canvas id="trend" height="220"></canvas></section>
+    </div>
+  </div>
+
+  <div class="page" data-page="scan">
+    <section>
+      <h2>Scan a lab target</h2>
+      <p class="sub">Use a private IP or a lab hostname that resolves to a private/loopback address. Needs nmap installed.</p>
+      <label for="target">Target IP or domain</label>
+      <input id="target" value="localhost"> <button id="scanBtn">Run scan</button>
+      <div id="scanOut" style="margin-top:12px"></div>
+      <h2 style="margin-top:20px">Recent scans</h2>
+      <table id="scanHistory"><tr><td>Loading scan history...</td></tr></table>
+    </section>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let chart;
+let reportData;
+const tone = r => r >= 15 ? "var(--hi)" : r >= 6 ? "var(--mid)" : "var(--lo)";
+
+async function load() {
+  const cap = Math.max(1, +$("cap").value || 5);
+  const d = await (await fetch("/api/report?capacity=" + cap)).json();
+  reportData = d;
+  const planned = d.roadmap.reduce((n, w) => n + w.fixes.length, 0);
+  const wk1 = d.roadmap[0];
+
+  $("aiMethod").textContent = d.ai_insights.method;
+  $("aiSummary").innerHTML = `<b>${d.ai_insights.summary}</b>`;
+  $("aiPriorities").innerHTML = d.ai_insights.priorities.map(item =>
+    `<div class="week"><b>${item.priority.toUpperCase()} · ${item.title}</b> <small>${item.asset_name} · risk ${item.risk} · confidence ${item.confidence}</small><br><span>${item.reason}. Recommended action: ${item.recommendation}.</span></div>`).join("");
+
+  $("kpis").innerHTML = `
+    <div class="kpi"><b>${d.total_risk}</b><span>Total risk score</span></div>
+    <div class="kpi"><b>${d.findings.length}</b><span>Findings from ${d.assets.length} assets</span></div>
+    <div class="kpi"><b>${planned}</b><span>Fixes clear everything in ${d.roadmap.length} weeks</span></div>
+    <div class="kpi"><b>${wk1 ? Math.round((1 - wk1.residual_risk / d.total_risk) * 100) : 0}%</b><span>Risk removed in week 1</span></div>`;
+
+  const severityCounts = d.findings.reduce((counts, f) => {
+    const severity = f.risk >= 15 ? "High" : f.risk >= 6 ? "Medium" : "Low";
+    counts[severity] = (counts[severity] || 0) + 1;
+    return counts;
+  }, {});
+  $("severitySummary").innerHTML = ["High", "Medium", "Low"].map(level =>
+    `<div><b>${severityCounts[level] || 0}</b><span>${level} risk findings</span></div>`).join("");
+  const assetRisk = d.findings.reduce((risks, f) => {
+    risks[f.asset_name] = (risks[f.asset_name] || 0) + f.risk;
+    return risks;
+  }, {});
+  $("assetSummary").innerHTML = Object.entries(assetRisk).sort((a, b) => b[1] - a[1]).map(([name, risk]) =>
+    `<div><b>${risk.toFixed(1)}</b><span>${name}</span></div>`).join("");
+
+  $("assets").innerHTML = "<tr><th>Asset</th><th>Criticality (1-5)</th><th>Exposure</th></tr>" +
+    d.assets.map(a => `<tr><td>${a.name}<br><small>${a.ip}</small></td>
+      <td><select data-id="${a.id}" data-k="criticality">${[1,2,3,4,5].map(n => `<option ${n===a.criticality?"selected":""}>${n}</option>`).join("")}</select></td>
+      <td><select data-id="${a.id}" data-k="exposure">${["internet","internal","isolated"].map(e => `<option ${e===a.exposure?"selected":""}>${e}</option>`).join("")}</select></td></tr>`).join("");
+  document.querySelectorAll("#assets select").forEach(s => s.onchange = updateAsset);
+
+  const assetFilter = $("findingAsset");
+  const selectedAsset = assetFilter.value;
+  assetFilter.innerHTML = '<option value="">All assets</option>' + d.assets.map(a => `<option value="${a.name}">${a.name}</option>`).join("");
+  assetFilter.value = selectedAsset;
+  renderFindings();
+  $("roadmap").innerHTML = d.roadmap.map(w => `<div class="week"><b>Week ${w.week}</b> <small>risk left: ${w.residual_risk}</small>` +
+    w.fixes.map(x => `<div class="fix">${x.title} <em>on ${x.asset_name} · removes ${x.risk_removed} risk · effort ${x.effort}<br>clears: ${x.findings.join(", ")}</em></div>`).join("") + "</div>").join("");
+
+  chart && chart.destroy();
+  chart = new Chart($("trend"), { type: "line",
+    data: { labels: ["Now", ...d.roadmap.map(w => "Week " + w.week)],
+            datasets: [{ data: d.trend, borderColor: "#1b2a38", backgroundColor: "#1b2a38", tension: .25 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: "Total risk" } } } } });
+}
+
+function renderFindings() {
+  if (!reportData) return;
+  const search = $("findingSearch").value.toLowerCase();
+  const asset = $("findingAsset").value;
+  const risk = $("findingRisk").value;
+  const kevOnly = $("findingKev").checked;
+  const filtered = reportData.findings.filter(f => {
+    const matchesSearch = !search || `${f.title} ${f.cve || ""}`.toLowerCase().includes(search);
+    const matchesAsset = !asset || f.asset_name === asset;
+    const matchesRisk = !risk || (risk === "high" ? f.risk >= 15 : risk === "medium" ? f.risk >= 6 && f.risk < 15 : f.risk < 6);
+    return matchesSearch && matchesAsset && matchesRisk && (!kevOnly || f.kev);
+  });
+  const max = Math.max(...reportData.findings.map(f => f.risk), 1);
+  $("findings").innerHTML = "<tr><th>#</th><th>Finding</th><th>Asset</th><th>CVSS</th><th>EPSS</th><th>Risk</th><th>CVSS rank → Risk rank</th></tr>" +
+    filtered.map(f => {
+      const diff = f.cvss_rank - f.rank;
+      const mv = diff > 0 ? `<span class="shift up">▲ ${diff}</span>` : diff < 0 ? `<span class="shift down">▼ ${-diff}</span>` : "no change";
+      return `<tr><td>${f.rank}</td><td><b>${f.title}</b><br><small>${f.cve || "misconfiguration"}${f.kev ? " · known exploited" : ""}</small></td>
+        <td>${f.asset_name}</td><td>${f.cvss}</td><td>${f.epss}</td>
+        <td style="min-width:110px">${f.risk}<div class="bar" style="width:${f.risk / max * 100}%;background:${tone(f.risk)}"></div></td>
+        <td>${f.cvss_rank} → ${f.rank} ${mv}</td></tr>`;
+    }).join("");
+}
+
+document.querySelectorAll(".nav-btn").forEach(btn => {
+  btn.onclick = () => {
+    const page = btn.dataset.page;
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll(".page").forEach(p => p.classList.toggle("active", p.dataset.page === page));
+  };
+});
+[$("findingSearch"), $("findingAsset"), $("findingRisk"), $("findingKev")].forEach(control => {
+  control.addEventListener(control.type === "search" ? "input" : "change", renderFindings);
+});
+
+async function updateAsset(e) {
+  const id = e.target.dataset.id;
+  const row = e.target.closest("tr");
+  const [crit, expo] = row.querySelectorAll("select");
+  await fetch("/api/assets/" + id, { method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ criticality: +crit.value, exposure: expo.value }) });
+  load();
+}
+
+$('scanBtn').onclick = async () => {
+  $("scanOut").textContent = "Scanning. This can take a minute.";
+  const r = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: $("target").value }) });
+  const d = await r.json();
+  if (!r.ok) { $("scanOut").innerHTML = `<span class="err">${d.detail}</span>`; return; }
+  $("scanOut").innerHTML = `<table><tr><th>Port</th><th>Service</th><th>Version</th><th>Version check</th></tr>` +
+    d.open_ports.map(p => `<tr><td>${p.port}/${p.proto}</td><td>${p.service}</td><td>${p.version || "-"}</td><td><span class="status ${p.version_status}">${p.version_status}</span><br><small>${p.version_note}</small></td></tr>`).join("") + "</table>";
+  loadScanHistory();
+};
+
+async function loadScanHistory() {
+  const scans = await (await fetch("/api/scans")).json();
+  $("scanHistory").innerHTML = scans.length ?
+    "<tr><th>When</th><th>Target</th><th>Open ports</th><th>Outdated services</th></tr>" + scans.map(scan => {
+      const outdated = scan.open_ports.filter(port => port.version_status === "outdated").length;
+      return `<tr><td>${new Date(scan.scanned_at).toLocaleString()}</td><td>${scan.target}</td><td>${scan.open_ports.length}</td><td>${outdated ? `<span class="status outdated">${outdated}</span>` : "0"}</td></tr>`;
+    }).join("") : "<tr><td>No scans recorded yet.</td></tr>";
+}
+
+$("cap").onchange = load;
+loadScanHistory();
+load();
+</script>
+</body>
+</html>
