@@ -104,6 +104,10 @@ def init_database():
                 fix_id TEXT NOT NULL, fix TEXT NOT NULL, effort INTEGER NOT NULL,
                 FOREIGN KEY(scan_id) REFERENCES scans(id)
             );
+            CREATE TABLE IF NOT EXISTS remediation_state (
+                finding_key TEXT PRIMARY KEY, status TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
         """)
         if connection.execute("SELECT COUNT(*) FROM assets").fetchone()[0] == 0:
             connection.executemany(
@@ -193,15 +197,49 @@ def score(f, asset):
     }
 
 
+def finding_key(f):
+    return "|".join(str(f.get(field, "")) for field in ("asset", "title", "cve"))
+
+
+def remediation_states():
+    with database() as connection:
+        return {row["finding_key"]: row["status"] for row in connection.execute(
+            "SELECT finding_key, status FROM remediation_state")}
+
+
+def risk_level(value):
+    return "critical" if value >= 30 else "high" if value >= 15 else "medium" if value >= 6 else "low"
+
+
+def enrich_finding(finding, asset, state):
+    result = {**finding, **score(finding, asset), "asset_name": asset["name"]}
+    result["finding_key"] = finding_key(result)
+    result["status"] = state.get(result["finding_key"], "open")
+    result["technical_severity"] = round(float(result["cvss"]), 1)
+    result["technical_severity_label"] = "critical" if result["cvss"] >= 9 else "high" if result["cvss"] >= 7 else "medium" if result["cvss"] >= 4 else "low"
+    result["asset_criticality_label"] = "critical" if asset["criticality"] >= 5 else "high" if asset["criticality"] >= 4 else "medium" if asset["criticality"] >= 3 else "low"
+    result["exposure_label"] = "internet-facing" if asset["exposure"] == "internet" else asset["exposure"]
+    result["business_impact"] = result["asset_criticality_label"]
+    result["business_impact_factor"] = result["criticality_factor"]
+    result["priority"] = "critical" if result["risk"] >= 30 else "high" if result["risk"] >= 15 else "medium" if result["risk"] >= 6 else "routine"
+    result["effective_risk"] = result["risk"] if result["status"] != "remediated" else 0
+    result["projected_risk"] = 0
+    result["risk_removed"] = result["effective_risk"]
+    result["risk_reduction_pct"] = round(result["risk_removed"] / result["risk"] * 100, 1) if result["risk"] else 0
+    return result
+
+
 def build_report(capacity):
     assets = read_assets()
     by_id = {a["id"]: a for a in assets}
+    states = remediation_states()
 
     findings = []
     for f in read_findings():
         f["kev"] = bool(f["kev"])
-        a = by_id[f["asset"]]
-        findings.append({**f, **score(f, a), "asset_name": a["name"]})
+        a = by_id.get(f["asset"])
+        if a:
+            findings.append(enrich_finding(f, a, states))
 
     findings.sort(key=lambda x: -x["risk"])
     for i, f in enumerate(findings, 1):
@@ -212,14 +250,16 @@ def build_report(capacity):
     # One fix can remove many findings -> plan fixes, not findings.
     fixes = {}
     for f in findings:
+        if f["effective_risk"] <= 0:
+            continue
         fx = fixes.setdefault(f["fix_id"], {
             "fix_id": f["fix_id"], "title": f["fix"], "asset_name": f["asset_name"],
             "effort": f["effort"], "risk_removed": 0, "findings": []})
-        fx["risk_removed"] = round(fx["risk_removed"] + f["risk"], 1)
+        fx["risk_removed"] = round(fx["risk_removed"] + f["effective_risk"], 1)
         fx["findings"].append(f["title"])
     plan = sorted(fixes.values(), key=lambda x: (-x["risk_removed"], x["effort"]))
 
-    total = round(sum(f["risk"] for f in findings), 1)
+    total = round(sum(f["effective_risk"] for f in findings), 1)
     weeks, trend, left = [], [total], total
     for i in range(0, len(plan), capacity):
         batch = plan[i:i + capacity]
@@ -227,9 +267,61 @@ def build_report(capacity):
         weeks.append({"week": i // capacity + 1, "fixes": batch, "residual_risk": left})
         trend.append(left)
 
+    top = findings[0] if findings else None
+    concentration = []
+    for asset in assets:
+        asset_risk = round(sum(f["effective_risk"] for f in findings if f["asset"] == asset["id"]), 1)
+        if asset_risk:
+            concentration.append({"asset_id": asset["id"], "asset_name": asset["name"], "risk": asset_risk})
+    concentration.sort(key=lambda item: -item["risk"])
+    concentration_total = sum(item["risk"] for item in concentration) or 1
+    for item in concentration:
+        item["percentage"] = round(item["risk"] / concentration_total * 100, 1)
+
+    posture = {
+        "business_risk": total,
+        "critical_findings": sum(1 for f in findings if f["effective_risk"] >= 30),
+        "high_findings": sum(1 for f in findings if 15 <= f["effective_risk"] < 30),
+        "affected_assets": sum(1 for item in concentration if item["risk"] > 0),
+        "resolved_findings": sum(1 for f in findings if f["status"] == "remediated"),
+        "risk_reduced": round(sum(f["risk"] - f["effective_risk"] for f in findings), 1),
+        "remediation_progress": round(sum(1 for f in findings if f["status"] == "remediated") / len(findings) * 100, 1) if findings else 0,
+    }
+
+    why_top = None
+    if top:
+        why_top = {
+            "finding_key": top["finding_key"],
+            "title": top["title"],
+            "asset_name": top["asset_name"],
+            "business_risk": top["effective_risk"],
+            "risk_removed": top["risk_removed"],
+            "factors": {
+                "technical_severity": top["technical_severity_label"],
+                "asset_criticality": top["asset_criticality_label"],
+                "exposure": top["exposure_label"],
+                "exploitability": risk_level(top["exploitability"] * 100),
+                "business_impact": top["business_impact"],
+            },
+            "explanation": f"This finding ranks first because it affects a {top['asset_criticality_label']} asset, is {top['exposure_label']}, and has {risk_level(top['exploitability'] * 100)} exploitability.",
+        }
+
+    attack_paths = [{
+        "finding_key": f["finding_key"],
+        "asset_name": f["asset_name"],
+        "exposure": f["exposure_label"],
+        "finding": f["title"],
+        "impact": f["business_impact"],
+        "inferred": True,
+    } for f in findings[:5]]
+
     return {"assets": assets, "findings": findings, "total_risk": total,
             "capacity": capacity, "roadmap": weeks, "trend": trend,
-            "ai_insights": build_ai_insights(findings, assets)}
+            "ai_insights": build_ai_insights(findings, assets),
+            "risk_concentration": concentration,
+            "posture": posture,
+            "why_top": why_top,
+            "attack_paths": attack_paths}
 
 
 def build_ai_insights(findings, assets):
@@ -268,6 +360,97 @@ def build_ai_insights(findings, assets):
 @app.get("/api/report")
 def report(capacity: int = 5):
     return build_report(max(1, min(capacity, 50)))
+
+
+class SimulationRequest(BaseModel):
+    finding_keys: list[str] = []
+
+
+@app.post("/api/simulate")
+def simulate_remediation(body: SimulationRequest):
+    data = build_report(50)
+    selected = set(body.finding_keys)
+    current = round(sum(f["effective_risk"] for f in data["findings"]), 1)
+    selected_findings = [f for f in data["findings"] if f["finding_key"] in selected and f["status"] != "remediated"]
+    removed = round(sum(f["risk"] for f in selected_findings), 1)
+    projected = round(max(current - removed, 0), 1)
+    return {
+        "current_risk": current,
+        "projected_risk": projected,
+        "risk_removed": removed,
+        "risk_reduction_pct": round(removed / current * 100, 1) if current else 0,
+        "selected": [{"finding_key": f["finding_key"], "title": f["title"], "asset_name": f["asset_name"], "risk_removed": f["risk"]} for f in selected_findings],
+    }
+
+
+@app.post("/api/remediations/apply")
+def apply_remediation(body: SimulationRequest):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    with database() as connection:
+        for key in set(body.finding_keys):
+            connection.execute(
+                "INSERT INTO remediation_state (finding_key, status, updated_at) VALUES (?, 'remediated', ?) "
+                "ON CONFLICT(finding_key) DO UPDATE SET status = 'remediated', updated_at = excluded.updated_at",
+                (key, timestamp))
+    return build_report(5)
+
+
+class WhatIfRequest(BaseModel):
+    asset_id: str
+    criticality: int
+    exposure: str
+
+
+@app.post("/api/risk-what-if")
+def risk_what_if(body: WhatIfRequest):
+    if not 1 <= body.criticality <= 5 or body.exposure not in EXPOSURE:
+        raise HTTPException(400, "criticality must be 1-5; exposure internet/internal/isolated")
+    data = build_report(50)
+    asset = next((item for item in data["assets"] if item["id"] == body.asset_id), None)
+    if not asset:
+        raise HTTPException(404, "Unknown asset")
+    hypothetical = {**asset, "criticality": body.criticality, "exposure": body.exposure}
+    affected = [f for f in data["findings"] if f["asset"] == body.asset_id]
+    current = round(sum(f["effective_risk"] for f in affected), 1)
+    projected = round(sum(score(f, hypothetical)["risk"] for f in affected if f["status"] != "remediated"), 1)
+    return {
+        "asset_id": body.asset_id,
+        "current": {"criticality": asset["criticality"], "exposure": asset["exposure"], "risk": current},
+        "what_if": {"criticality": body.criticality, "exposure": body.exposure, "risk": projected},
+        "delta": round(projected - current, 1),
+        "factors_changed": [field for field in ("criticality", "exposure") if asset[field] != hypothetical[field]],
+    }
+
+
+def scan_snapshot(scan_id):
+    with database() as connection:
+        scan = connection.execute("SELECT id, target, scanned_at FROM scans WHERE id = ?", (scan_id,)).fetchone()
+        if not scan:
+            raise HTTPException(404, "Unknown scan")
+        ports = [dict(row) for row in connection.execute(
+            "SELECT port, proto, service, version, version_status, version_note FROM scan_ports WHERE scan_id = ? ORDER BY port", (scan_id,))]
+        findings = [dict(row) for row in connection.execute(
+            "SELECT asset, title, cve, cvss, epss, kev, fix_id, fix, effort FROM scan_findings WHERE scan_id = ? ORDER BY id", (scan_id,))]
+    return {**dict(scan), "open_ports": ports, "findings": findings}
+
+
+@app.get("/api/scan-comparison")
+def scan_comparison(before_id: int, after_id: int):
+    before = scan_snapshot(before_id)
+    after = scan_snapshot(after_id)
+    before_keys = {finding_key(item) for item in before["findings"]}
+    after_keys = {finding_key(item) for item in after["findings"]}
+    resolved = sorted(before_keys - after_keys)
+    new = sorted(after_keys - before_keys)
+    remaining = sorted(before_keys & after_keys)
+    before_risk = round(sum(score(f, next((a for a in read_assets() if a["id"] == f["asset"]), {"criticality": 1, "exposure": "internal"}))['risk'] for f in before["findings"]), 1)
+    after_risk = round(sum(score(f, next((a for a in read_assets() if a["id"] == f["asset"]), {"criticality": 1, "exposure": "internal"}))['risk'] for f in after["findings"]), 1)
+    return {
+        "before": {"id": before["id"], "scanned_at": before["scanned_at"], "findings": len(before["findings"]), "risk": before_risk},
+        "after": {"id": after["id"], "scanned_at": after["scanned_at"], "findings": len(after["findings"]), "risk": after_risk},
+        "resolved": resolved, "new": new, "remaining": remaining,
+        "risk_reduction_pct": round((before_risk - after_risk) / before_risk * 100, 1) if before_risk else 0,
+    }
 
 
 class AssetUpdate(BaseModel):
@@ -376,10 +559,9 @@ def build_scan_findings(services, asset_id):
     return findings
 
 
-@app.post("/api/scan")
-def scan(req: ScanRequest):
-    """Service/version scan. Accept either a private IP or a lab hostname resolving to a private/loopback IP."""
-    target_ip = resolve_target_ip(req.target)
+def perform_scan(target):
+    """Run and persist one authorized private/loopback Nmap scan."""
+    target_ip = resolve_target_ip(target)
     if not (target_ip.is_private or target_ip.is_loopback):
         raise HTTPException(403, "Blocked: only private/lab targets may be scanned")
 
@@ -437,6 +619,12 @@ def scan(req: ScanRequest):
     return result
 
 
+@app.post("/api/scan")
+def scan(req: ScanRequest):
+    """Synchronous service/version scan for existing API clients."""
+    return perform_scan(req.target)
+
+
 @app.get("/api/scans")
 def scan_history():
     with database() as connection:
@@ -445,7 +633,7 @@ def scan_history():
         for scan_result in scans:
             scan_result["open_ports"] = [dict(row) for row in connection.execute(
                 "SELECT port, proto, service, version, version_status, version_note FROM scan_ports WHERE scan_id = ? ORDER BY port",
-                (scan_result.pop("id"),))]
+                (scan_result["id"],))]
     return scans
 
 
